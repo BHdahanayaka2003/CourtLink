@@ -141,7 +141,7 @@ struct OwnerProfileView: View {
                     }) {
                         HStack(spacing: 8) {
                             Image(systemName: "rectangle.portrait.and.arrow.right")
-                            Text("Log Out / Switch Account")
+                            Text("Log Out")
                                 .fontWeight(.bold)
                         }
                         .frame(maxWidth: .infinity)

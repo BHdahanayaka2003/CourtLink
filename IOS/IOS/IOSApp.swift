@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UserNotifications
 #if canImport(FirebaseCore)
 import FirebaseCore
 
@@ -16,7 +17,16 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     ) -> Bool {
         FirebaseApp.configure()
         print("Firebase configured successfully!")
+
+        // Request notification permission and register the delegate
+        NotificationService.shared.requestPermission()
+        UNUserNotificationCenter.current().delegate = NotificationService.shared
+
         return true
+    }
+
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        NotificationService.shared.clearBadge()
     }
 }
 #endif

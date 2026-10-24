@@ -254,28 +254,3 @@ struct SpecBox: View {
     }
 }
 
-#Preview {
-    NavigationStack {
-        FacilityDetailView(
-            facility: Facility(
-                id: "fac-1",
-                name: "District Sport Complex",
-                sport: .badminton,
-                address: "Albert Crescent",
-                area: "Colombo 07",
-                latitude: 6.908,
-                longitude: 79.866,
-                pricePerHour: 1500,
-                rating: 4.8,
-                reviewsCount: 142,
-                openingHours: "06:00 AM - 10:00 PM",
-                amenities: ["Parking", "Locker Room", "Equipment Rental", "Showers"],
-                description: "State-of-the-art wooden flooring indoor courts.",
-                courtsCount: 4,
-                imageSystemName: "sportscourt.fill",
-                isFeatured: true
-            )
-        )
-        .environmentObject(CourtLinkDataStore())
-    }
-}

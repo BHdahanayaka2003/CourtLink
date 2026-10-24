@@ -11,10 +11,10 @@ struct Facility: Identifiable, Hashable, Codable {
     var name: String
     var sport: SportType
     var address: String
-    var area: String // e.g. "Colombo 07"
+    var area: String
     var latitude: Double
     var longitude: Double
-    var pricePerHour: Int // in LKR (Rs.)
+    var pricePerHour: Int 
     var rating: Double
     var reviewsCount: Int
     var openingHours: String

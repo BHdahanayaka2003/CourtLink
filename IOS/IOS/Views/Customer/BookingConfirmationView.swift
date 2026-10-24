@@ -160,22 +160,4 @@ struct ReceiptRow: View {
     }
 }
 
-#Preview {
-    BookingConfirmationView(
-        booking: Booking(
-            id: "CL-20491",
-            facilityId: "fac-1",
-            facilityName: "District Sport Complex",
-            facilityAddress: "Albert Crescent",
-            sport: .badminton,
-            date: Date(),
-            timeSlot: "06:00 PM - 07:00 PM",
-            courtNumber: 1,
-            price: 1500,
-            status: .confirmed,
-            customerName: "Budhwin Dahanayaka",
-            customerPhone: "+94 77 123 4567",
-            createdAt: Date()
-        )
-    )
-}
+

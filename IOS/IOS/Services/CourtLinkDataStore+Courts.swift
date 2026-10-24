@@ -90,6 +90,9 @@ extension CourtLinkDataStore {
             verifiedOnSite: verifiedOnSite
         )
         courtFaults.insert(fault, at: 0)
+        
+        // Notify the owner about the new fault
+        NotificationService.shared.notifyOwnerFaultReported(fault: fault, facilityName: facility.name)
 
         #if canImport(FirebaseFirestore)
         Firestore.firestore().collection("faults").document(fault.id).setData([
@@ -119,6 +122,11 @@ extension CourtLinkDataStore {
         guard let index = courtFaults.firstIndex(where: { $0.id == faultId }) else { return }
         courtFaults[index].status = status
         courtFaults[index].resolvedAt = status == .resolved ? Date() : nil
+        
+        // Notify the owner about the status change
+        let updatedFault = courtFaults[index]
+        let facilityName = facilities.first(where: { $0.id == updatedFault.facilityId })?.name ?? "Facility"
+        NotificationService.shared.notifyOwnerFaultStatusUpdated(fault: updatedFault, facilityName: facilityName)
 
         #if canImport(FirebaseFirestore)
         var data: [String: Any] = ["status": status.rawValue]
@@ -168,30 +176,6 @@ extension CourtLinkDataStore {
         #if canImport(FirebaseFirestore)
         Firestore.firestore().collection("courts").document(id).delete()
         #endif
-    }
-
-    // MARK: - Sample data (so the feature is visible before anything is reported)
-    func loadSampleFaults() {
-        guard let facility = facilities.first(where: { $0.id == "fac-3" }),
-              let court = courts(for: facility).first(where: { $0.number == 2 }) else { return }
-        courtFaults = [
-            CourtFault(
-                id: "sample-1",
-                facilityId: facility.id,
-                courtId: court.id,
-                courtNumber: court.number,
-                category: .lighting,
-                severity: .moderate,
-                notes: "Two floodlights on the east side are flickering.",
-                status: .inProgress,
-                reportedBy: "Demo data",
-                reportedAt: Date().addingTimeInterval(-3600 * 5),
-                resolvedAt: nil,
-                latitude: court.latitude,
-                longitude: court.longitude,
-                verifiedOnSite: true
-            )
-        ]
     }
 
     // MARK: - Firestore real-time listeners
@@ -250,8 +234,7 @@ extension CourtLinkDataStore {
                 )
             }
             DispatchQueue.main.async {
-                let samples = self.courtFaults.filter { $0.id.hasPrefix("sample-") }
-                self.courtFaults = (remote + samples).sorted { $0.reportedAt > $1.reportedAt }
+                self.courtFaults = remote.sorted { $0.reportedAt > $1.reportedAt }
             }
         }
         #endif

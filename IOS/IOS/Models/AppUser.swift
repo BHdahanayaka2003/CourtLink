@@ -1,7 +1,4 @@
-//
-//  AppUser.swift
-//  CourtLink
-//
+
 
 import Foundation
 

@@ -17,13 +17,13 @@ class CourtLinkDataStore: ObservableObject {
     
     // Owner Mode State
     @Published var isOwnerMode: Bool = false
-    @Published var ownerFacilityId: String = "fac-1" // Primary facility ID
-    @Published var ownerFacilityIds: Set<String> = ["fac-1"] // All facilities owned by this user
+    @Published var ownerFacilityId: String = ""
+    @Published var ownerFacilityIds: Set<String> = []
     
     // User Info
-    @Published var userName: String = "Budhwin Dahanayaka"
-    @Published var userEmail: String = "budhwin@courtlink.lk"
-    @Published var userPhone: String = "+94 77 123 4567"
+    @Published var userName: String = ""
+    @Published var userEmail: String = ""
+    @Published var userPhone: String = ""
     
     // Blocked Slots cache: [FacilityId-DateString-SlotId: Bool]
     @Published var blockedSlots: Set<String> = []
@@ -33,126 +33,9 @@ class CourtLinkDataStore: ObservableObject {
     @Published var courtFaults: [CourtFault] = []
     
     init() {
-        loadSampleFacilities()
-        loadSampleBookings()
-        loadSampleFaults()
         fetchFacilitiesFromFirestore()
+        fetchBookingsFromFirestore()
         listenForCourtsAndFaults()
-    }
-    
-    // MARK: - Sample Facilities (Sri Lanka Locations)
-    private func loadSampleFacilities() {
-        facilities = [
-            Facility(
-                id: "fac-1",
-                name: "District Sport Complex",
-                sport: .badminton,
-                address: "Albert Crescent, Cinnamon Gardens",
-                area: "Colombo 07",
-                latitude: 6.9080,
-                longitude: 79.8660,
-                pricePerHour: 1500,
-                rating: 4.8,
-                reviewsCount: 142,
-                openingHours: "06:00 AM - 10:00 PM",
-                amenities: ["Parking", "Locker Room", "Equipment Rental", "Showers", "Wi-Fi", "Cafeteria"],
-                description: "State-of-the-art wooden flooring indoor badminton courts with BWF certified LED lighting and modern spectator stands.",
-                courtsCount: 4,
-                imageSystemName: "sportscourt.fill",
-                isFeatured: true
-            ),
-            Facility(
-                id: "fac-2",
-                name: "Apex Badminton Academy",
-                sport: .badminton,
-                address: "High Level Road",
-                area: "Nugegoda",
-                latitude: 6.8710,
-                longitude: 79.8985,
-                pricePerHour: 1200,
-                rating: 4.6,
-                reviewsCount: 98,
-                openingHours: "07:00 AM - 11:00 PM",
-                amenities: ["Parking", "Locker Room", "Equipment Rental", "Showers"],
-                description: "Synthetic rubber courts ideal for high-speed rallies, coaching sessions, and casual weekly games.",
-                courtsCount: 3,
-                imageSystemName: "figure.badminton",
-                isFeatured: false
-            ),
-            Facility(
-                id: "fac-3",
-                name: "CR&FC Futsal Pitch",
-                sport: .futsal,
-                address: "Malalasekara Mawatha",
-                area: "Colombo 07",
-                latitude: 6.9015,
-                longitude: 79.8692,
-                pricePerHour: 4500,
-                rating: 4.9,
-                reviewsCount: 215,
-                openingHours: "06:00 AM - 12:00 AM",
-                amenities: ["Parking", "Locker Room", "Floodlights", "Showers", "Refreshments"],
-                description: "All-weather FIFA approved synthetic turf pitch with professional floodlighting and perimeter netting.",
-                courtsCount: 2,
-                imageSystemName: "figure.indoor.soccer",
-                isFeatured: true
-            ),
-            Facility(
-                id: "fac-4",
-                name: "Colombo Futsal Arena",
-                sport: .futsal,
-                address: "Marine Drive",
-                area: "Dehiwala",
-                latitude: 6.8520,
-                longitude: 79.8630,
-                pricePerHour: 3800,
-                rating: 4.5,
-                reviewsCount: 88,
-                openingHours: "07:00 AM - 11:00 PM",
-                amenities: ["Parking", "Locker Room", "Showers", "Sea Breeze Cafe"],
-                description: "Breezy seaside indoor turf court with spectator gallery and convenient parking.",
-                courtsCount: 2,
-                imageSystemName: "figure.indoor.soccer",
-                isFeatured: false
-            ),
-            Facility(
-                id: "fac-5",
-                name: "Torrington Tennis Club",
-                sport: .tennis,
-                address: "Torrington Square",
-                area: "Colombo 07",
-                latitude: 6.9030,
-                longitude: 79.8680,
-                pricePerHour: 2200,
-                rating: 4.7,
-                reviewsCount: 110,
-                openingHours: "06:00 AM - 09:00 PM",
-                amenities: ["Parking", "Clay Courts", "Racket Restringing", "Locker Room"],
-                description: "Classic red clay tennis courts maintained in tournament grade condition right in the heart of Torrington.",
-                courtsCount: 3,
-                imageSystemName: "figure.tennis",
-                isFeatured: true
-            ),
-            Facility(
-                id: "fac-6",
-                name: "Colombo Swimming Club",
-                sport: .swimming,
-                address: "148 Galle Road",
-                area: "Galle Face, Colombo 03",
-                latitude: 6.9150,
-                longitude: 79.8490,
-                pricePerHour: 1800,
-                rating: 4.9,
-                reviewsCount: 175,
-                openingHours: "06:00 AM - 09:00 PM",
-                amenities: ["Parking", "Changing Rooms", "Life Guards", "Poolside Dining", "Sauna"],
-                description: "Olympic length 50m heated pool overlooking the Indian Ocean with certified lifeguards and dedicated lap lanes.",
-                courtsCount: 8,
-                imageSystemName: "figure.pool.swim",
-                isFeatured: true
-            )
-        ]
-        favoriteFacilityIds = ["fac-1", "fac-3"]
     }
     
     // MARK: - Firestore Real-Time Listener
@@ -202,60 +85,45 @@ class CourtLinkDataStore: ObservableObject {
         #endif
     }
     
-    // MARK: - Sample Bookings
-    private func loadSampleBookings() {
-        let calendar = Calendar.current
-        let today = Date()
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) ?? today
-        let pastDate = calendar.date(byAdding: .day, value: -3, to: today) ?? today
-        
-        bookings = [
-            Booking(
-                id: "CL-20491",
-                facilityId: "fac-1",
-                facilityName: "District Sport Complex",
-                facilityAddress: "Albert Crescent, Colombo 07",
-                sport: .badminton,
-                date: tomorrow,
-                timeSlot: "06:00 PM - 07:00 PM",
-                courtNumber: 1,
-                price: 1500,
-                status: .confirmed,
-                customerName: userName,
-                customerPhone: userPhone,
-                createdAt: today
-            ),
-            Booking(
-                id: "CL-19882",
-                facilityId: "fac-3",
-                facilityName: "CR&FC Futsal Pitch",
-                facilityAddress: "Malalasekara Mawatha, Colombo 07",
-                sport: .futsal,
-                date: calendar.date(byAdding: .day, value: 4, to: today) ?? today,
-                timeSlot: "08:00 PM - 09:00 PM",
-                courtNumber: 1,
-                price: 4500,
-                status: .confirmed,
-                customerName: userName,
-                customerPhone: userPhone,
-                createdAt: today
-            ),
-            Booking(
-                id: "CL-15401",
-                facilityId: "fac-5",
-                facilityName: "Torrington Tennis Club",
-                facilityAddress: "Torrington Square, Colombo 07",
-                sport: .tennis,
-                date: pastDate,
-                timeSlot: "05:00 PM - 06:00 PM",
-                courtNumber: 2,
-                price: 2200,
-                status: .completed,
-                customerName: userName,
-                customerPhone: userPhone,
-                createdAt: pastDate
-            )
-        ]
+    // MARK: - Firestore Bookings Listener
+    func fetchBookingsFromFirestore() {
+        #if canImport(FirebaseFirestore)
+        let db = Firestore.firestore()
+        db.collection("bookings").addSnapshotListener { [weak self] snapshot, error in
+            guard let self = self, let documents = snapshot?.documents else { return }
+            let firestoreBookings = documents.compactMap { doc -> Booking? in
+                let data = doc.data()
+                guard let facilityId   = data["facilityId"]   as? String,
+                      let facilityName = data["facilityName"] as? String,
+                      let sportRaw     = data["sport"]        as? String,
+                      let sport        = SportType(rawValue: sportRaw),
+                      let timestamp    = data["date"]         as? Timestamp,
+                      let timeSlot     = data["timeSlot"]     as? String,
+                      let courtNumber  = data["courtNumber"]  as? Int,
+                      let price        = data["price"]        as? Int,
+                      let statusRaw    = data["status"]       as? String,
+                      let status       = BookingStatus(rawValue: statusRaw) else { return nil }
+                return Booking(
+                    id: doc.documentID,
+                    facilityId: facilityId,
+                    facilityName: facilityName,
+                    facilityAddress: data["facilityAddress"] as? String ?? "",
+                    sport: sport,
+                    date: timestamp.dateValue(),
+                    timeSlot: timeSlot,
+                    courtNumber: courtNumber,
+                    price: price,
+                    status: status,
+                    customerName: data["customerName"] as? String ?? "",
+                    customerPhone: data["customerPhone"] as? String ?? "",
+                    createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
+                )
+            }
+            DispatchQueue.main.async {
+                self.bookings = firestoreBookings.sorted { $0.createdAt > $1.createdAt }
+            }
+        }
+        #endif
     }
     
     // MARK: - Helper Methods
@@ -295,6 +163,15 @@ class CourtLinkDataStore: ObservableObject {
         )
         bookings.insert(booking, at: 0)
         
+        // Notify the customer
+        NotificationService.shared.notifyBookingConfirmed(booking: booking)
+        NotificationService.shared.scheduleBookingReminder(booking: booking)
+        
+        // Notify the owner (if they are on this device in owner mode)
+        if isOwnerMode {
+            NotificationService.shared.notifyOwnerNewBooking(booking: booking)
+        }
+        
         // Sync to Firestore if available
         #if canImport(FirebaseFirestore)
         let db = Firestore.firestore()
@@ -302,6 +179,7 @@ class CourtLinkDataStore: ObservableObject {
             "id": booking.id,
             "facilityId": booking.facilityId,
             "facilityName": booking.facilityName,
+            "facilityAddress": booking.facilityAddress,
             "sport": booking.sport.rawValue,
             "date": Timestamp(date: booking.date),
             "timeSlot": booking.timeSlot,
@@ -309,6 +187,7 @@ class CourtLinkDataStore: ObservableObject {
             "price": booking.price,
             "status": booking.status.rawValue,
             "customerName": booking.customerName,
+            "customerPhone": booking.customerPhone,
             "createdAt": FieldValue.serverTimestamp()
         ]) { error in
             if let error = error {
@@ -325,6 +204,10 @@ class CourtLinkDataStore: ObservableObject {
     func cancelBooking(bookingId: String) {
         if let index = bookings.firstIndex(where: { $0.id == bookingId }) {
             bookings[index].status = .cancelled
+            let cancelled = bookings[index]
+            
+            // Notify the customer and cancel any pending reminder
+            NotificationService.shared.notifyBookingCancelled(booking: cancelled)
             
             #if canImport(FirebaseFirestore)
             let db = Firestore.firestore()
@@ -341,12 +224,17 @@ class CourtLinkDataStore: ObservableObject {
     }
     
     var ownerFacilities: [Facility] {
-        let matched = facilities.filter { ownerFacilityIds.contains($0.id) }
-        return matched.isEmpty ? [facilities[0]] : matched
+        facilities.filter { ownerFacilityIds.contains($0.id) }
     }
     
     var ownerTodayBookings: [Booking] {
-        bookings.filter { $0.facilityId == ownerFacilityId }
+        let todayStart = Calendar.current.startOfDay(for: Date())
+        let todayEnd = Calendar.current.date(byAdding: .day, value: 1, to: todayStart) ?? todayStart
+        return bookings.filter {
+            $0.facilityId == ownerFacilityId &&
+            $0.date >= todayStart &&
+            $0.date < todayEnd
+        }
     }
     
     var ownerTodayRevenue: Int {
@@ -505,15 +393,13 @@ class CourtLinkDataStore: ObservableObject {
         return rawSlots.enumerated().map { index, slotTuple in
             let slotId = "slot-\(index)"
             let isBlocked = isSlotBlocked(facilityId: facilityId, dateString: dateKey, slotId: slotId)
-            // Mock some taken slots (e.g. 07:00 AM or 07:00 PM)
-            let isMockTaken = (index == 1 || index == 11)
             
             return TimeSlot(
                 id: slotId,
                 timeLabel: slotTuple.0,
                 startTimeString: slotTuple.1,
                 period: slotTuple.2,
-                isAvailable: !isBlocked && !isMockTaken,
+                isAvailable: !isBlocked,
                 isBlockedByOwner: isBlocked
             )
         }
