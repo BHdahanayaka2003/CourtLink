@@ -65,7 +65,7 @@ struct CustomerProfileView: View {
                     HStack(spacing: 12) {
                         PlayerStatCard(
                             title: "Bookings",
-                            value: "\(dataStore.bookings.count)",
+                            value: "\(dataStore.myBookings.count)",
                             icon: "calendar.badge.clock",
                             color: CourtLinkTheme.primaryGreen
                         )
@@ -92,7 +92,7 @@ struct CustomerProfileView: View {
                         Divider().padding(.leading, 50)
                         
                         NavigationLink(destination: MyBookingsView()) {
-                            ProfileMenuRow(icon: "calendar", title: "My Reservations", detail: "\(dataStore.bookings.count) total")
+                            ProfileMenuRow(icon: "calendar", title: "My Reservations", detail: "\(dataStore.myBookings.count) total")
                         }
                         
                         Divider().padding(.leading, 50)

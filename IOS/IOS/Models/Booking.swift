@@ -41,6 +41,10 @@ struct Booking: Identifiable, Hashable, Codable {
     let customerName: String
     let customerPhone: String
     let createdAt: Date
+    /// Firebase Auth uid of the customer who made the booking (used for privacy filtering).
+    var customerId: String = ""
+    /// Login username of the customer (shown to the facility owner).
+    var customerUsername: String = ""
     
     var formattedDate: String {
         let formatter = DateFormatter()

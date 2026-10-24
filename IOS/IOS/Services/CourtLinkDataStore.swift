@@ -24,6 +24,10 @@ class CourtLinkDataStore: ObservableObject {
     @Published var userName: String = ""
     @Published var userEmail: String = ""
     @Published var userPhone: String = ""
+    @Published var userId: String = ""
+    @Published var userUsername: String = ""
+    /// True only when the signed-in ACCOUNT has the owner role (not just the UI toggle).
+    @Published var isOwnerAccount: Bool = false
     
     // Blocked Slots cache: [FacilityId-DateString-SlotId: Bool]
     @Published var blockedSlots: Set<String> = []
@@ -32,10 +36,58 @@ class CourtLinkDataStore: ObservableObject {
     @Published var customCourts: [String: Court] = [:]   // owner-pinned court locations, keyed by court id
     @Published var courtFaults: [CourtFault] = []
     
+    #if canImport(FirebaseFirestore)
+    private var bookingsListener: ListenerRegistration?
+    #endif
+    private var sessionKey: String = ""
+    
     init() {
         fetchFacilitiesFromFirestore()
-        fetchBookingsFromFirestore()
         listenForCourtsAndFaults()
+        // Bookings are loaded per signed-in user in configureSession(user:)
+    }
+    
+    // MARK: - Session (privacy)
+    /// Called after login. Customers only ever load THEIR OWN bookings; owners load all.
+    func configureSession(user: AppUser) {
+        userId = user.id
+        userUsername = user.username
+        isOwnerAccount = (user.role == .owner)
+        
+        let key = "\(user.id)|\(user.role.rawValue)"
+        guard key != sessionKey else { return }
+        sessionKey = key
+        
+        bookings = []
+        fetchBookingsFromFirestore()
+    }
+    
+    /// Called on logout - wipes every booking from memory and stops the listener.
+    func clearSession() {
+        #if canImport(FirebaseFirestore)
+        bookingsListener?.remove()
+        bookingsListener = nil
+        #endif
+        sessionKey = ""
+        bookings = []
+        userId = ""
+        userUsername = ""
+        userName = ""
+        userEmail = ""
+        userPhone = ""
+        isOwnerAccount = false
+        isOwnerMode = false
+    }
+    
+    /// Bookings that belong to the signed-in customer only.
+    var myBookings: [Booking] {
+        guard !userId.isEmpty else { return [] }
+        return bookings.filter { $0.customerId == userId }
+    }
+    
+    /// Bookings the owner may see (owner accounts only). Customers always get an empty list.
+    var ownerVisibleBookings: [Booking] {
+        isOwnerAccount ? bookings : []
     }
     
     // MARK: - Firestore Real-Time Listener
@@ -88,8 +140,19 @@ class CourtLinkDataStore: ObservableObject {
     // MARK: - Firestore Bookings Listener
     func fetchBookingsFromFirestore() {
         #if canImport(FirebaseFirestore)
+        bookingsListener?.remove()
+        bookingsListener = nil
+        guard !userId.isEmpty else { return }
+        
         let db = Firestore.firestore()
-        db.collection("bookings").addSnapshotListener { [weak self] snapshot, error in
+        let collection = db.collection("bookings")
+        // PRIVACY: customers only query their own bookings; only owner accounts read everything.
+        let query: Query = isOwnerAccount
+            ? collection
+            : collection.whereField("customerId", isEqualTo: userId)
+        
+        bookingsListener = query.addSnapshotListener { [weak self] snapshot, error in
+            if let error = error { print("Bookings listener error: \(error.localizedDescription)") }
             guard let self = self, let documents = snapshot?.documents else { return }
             let firestoreBookings = documents.compactMap { doc -> Booking? in
                 let data = doc.data()
@@ -116,7 +179,9 @@ class CourtLinkDataStore: ObservableObject {
                     status: status,
                     customerName: data["customerName"] as? String ?? "",
                     customerPhone: data["customerPhone"] as? String ?? "",
-                    createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
+                    createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
+                    customerId: data["customerId"] as? String ?? "",
+                    customerUsername: data["customerUsername"] as? String ?? ""
                 )
             }
             DispatchQueue.main.async {
@@ -159,7 +224,9 @@ class CourtLinkDataStore: ObservableObject {
             status: .confirmed,
             customerName: userName,
             customerPhone: userPhone,
-            createdAt: Date()
+            createdAt: Date(),
+            customerId: userId,
+            customerUsername: userUsername
         )
         bookings.insert(booking, at: 0)
         
@@ -188,6 +255,8 @@ class CourtLinkDataStore: ObservableObject {
             "status": booking.status.rawValue,
             "customerName": booking.customerName,
             "customerPhone": booking.customerPhone,
+            "customerId": booking.customerId,
+            "customerUsername": booking.customerUsername,
             "createdAt": FieldValue.serverTimestamp()
         ]) { error in
             if let error = error {
@@ -203,6 +272,8 @@ class CourtLinkDataStore: ObservableObject {
     
     func cancelBooking(bookingId: String) {
         if let index = bookings.firstIndex(where: { $0.id == bookingId }) {
+            // PRIVACY: a customer can only cancel their own booking.
+            guard isOwnerAccount || bookings[index].customerId == userId else { return }
             bookings[index].status = .cancelled
             let cancelled = bookings[index]
             
@@ -230,7 +301,7 @@ class CourtLinkDataStore: ObservableObject {
     var ownerTodayBookings: [Booking] {
         let todayStart = Calendar.current.startOfDay(for: Date())
         let todayEnd = Calendar.current.date(byAdding: .day, value: 1, to: todayStart) ?? todayStart
-        return bookings.filter {
+        return ownerVisibleBookings.filter {
             $0.facilityId == ownerFacilityId &&
             $0.date >= todayStart &&
             $0.date < todayEnd

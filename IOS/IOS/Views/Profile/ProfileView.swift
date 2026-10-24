@@ -86,7 +86,7 @@ struct ProfileView: View {
                         Divider().padding(.leading, 50)
                         
                         NavigationLink(destination: MyBookingsView()) {
-                            ProfileMenuRow(icon: "calendar", title: "Booking History", detail: "\(dataStore.bookings.count) total")
+                            ProfileMenuRow(icon: "calendar", title: "Booking History", detail: "\(dataStore.myBookings.count) total")
                         }
                         
                         Divider().padding(.leading, 50)

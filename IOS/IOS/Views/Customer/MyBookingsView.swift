@@ -19,9 +19,9 @@ struct MyBookingsView: View {
     var filteredBookings: [Booking] {
         switch selectedTab {
         case .upcoming:
-            return dataStore.bookings.filter { $0.status == .confirmed }
+            return dataStore.myBookings.filter { $0.status == .confirmed }
         case .past:
-            return dataStore.bookings.filter { $0.status != .confirmed }
+            return dataStore.myBookings.filter { $0.status != .confirmed }
         }
     }
     

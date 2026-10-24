@@ -28,7 +28,7 @@ struct ContentView: View {
         .environmentObject(dataStore)
         .environmentObject(auth)
         .onChange(of: auth.currentUser) { _, user in
-            if let user { apply(user) }
+            if let user { apply(user) } else { dataStore.clearSession() }
         }
         .alert(
             "Enable \(auth.biometryName)?",
@@ -50,6 +50,7 @@ struct ContentView: View {
         dataStore.userEmail = user.email.isEmpty ? "@\(user.username)" : user.email
         dataStore.userPhone = user.phone
         dataStore.isOwnerMode = (user.role == .owner)
+        dataStore.configureSession(user: user)   // loads ONLY this user's bookings (owner: all)
     }
 }
 

@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Owner account = the default owner login (username Budhvin2003).
+    function isOwner() {
+      return request.auth != null &&
+             request.auth.token.email == 'budhvin2003@courtlink.app';
+    }
+
+    // ---- BOOKINGS: privacy ----
+    match /bookings/{bookingId} {
+      // Customer reads only their own bookings; owner reads all.
+      allow read:   if request.auth != null &&
+                       (resource.data.customerId == request.auth.uid || isOwner());
+      // Customer can only create a booking for themselves.
+      allow create: if request.auth != null &&
+                       request.resource.data.customerId == request.auth.uid;
+      // Customer can update (cancel) only their own booking; owner can update any.
+      allow update: if request.auth != null &&
+                       (resource.data.customerId == request.auth.uid || isOwner());
+      allow delete: if isOwner();
+    }
+
+    // ---- USERS: each person reads/writes only their own profile ----
+    match /users/{uid} {
+      allow read:   if request.auth != null && (request.auth.uid == uid || isOwner());
+      allow create: if request.auth != null && request.auth.uid == uid;
+      allow update: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // ---- Other collections (adjust to your needs) ----
+    match /facilities/{id} { allow read: if true; allow write: if request.auth != null; }
+    match /courts/{id}     { allow read: if true; allow write: if request.auth != null; }
+    match /faults/{id}     { allow read, write: if request.auth != null; }
+  }
+}

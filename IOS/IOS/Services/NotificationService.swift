@@ -2,23 +2,11 @@
 //  NotificationService.swift
 //  CourtLink
 //
-//  Manages all local push notifications for CourtLink.
-//
-//  Triggers:
-//  ┌─────────────────────────────────────────────────────────────────────┐
-//  │ CUSTOMER                                                            │
-//  │  • Booking confirmed          – immediate                           │
-//  │  • Booking reminder           – 1 hour before the slot starts       │
-//  │  • Booking cancelled          – immediate                           │
-//  │                                                                     │
-//  │ OWNER                                                               │
-//  │  • New booking at facility    – immediate                           │
-//  │  • Court fault reported       – immediate                           │
-//  │  • Fault status updated       – immediate                           │
-//  └─────────────────────────────────────────────────────────────────────┘
+
 
 import UserNotifications
 import SwiftUI
+import Combine
 
 // MARK: - Notification Category / Action identifiers
 private enum Category {
@@ -228,7 +216,7 @@ final class NotificationService: NSObject, ObservableObject, UNUserNotificationC
         let content = UNMutableNotificationContent()
         content.title = "⚠️ Court Fault Reported"
         content.body  = "Court \(fault.courtNumber) at \(facilityName): \(fault.category.rawValue) — \(fault.severity.title)"
-        content.subtitle = fault.notes.isEmpty ? nil : fault.notes
+        content.subtitle = fault.notes.isEmpty ? "" : fault.notes
         content.sound = .defaultCritical
         content.badge = 1
         content.categoryIdentifier = Category.fault
@@ -290,3 +278,4 @@ final class NotificationService: NSObject, ObservableObject, UNUserNotificationC
         return Calendar.current.date(byAdding: timeComponents, to: bookingDay)
     }
 }
+
